@@ -1,6 +1,6 @@
 'use client';
 
-import React from 'react';
+import React, { useMemo } from 'react';
 import {
   LineChart,
   Line,
@@ -11,53 +11,177 @@ import {
   Legend,
   ResponsiveContainer,
 } from 'recharts';
+import { LapData } from '@/types/telemetry';
 
 interface TelemetryChartProps {
-  data: any[];
-  dataKey: string;
-  name: string;
-  color: string;
-  unit?: string;
-  syncId?: string;
+  laps: LapData[];
+  deltaData?: { distance: number; delta: number }[] | null;
 }
 
+const DRIVER_COLORS: Record<string, string> = {
+  Peddycord: '#ef4444', // Red
+  Emmett: '#3b82f6',    // Blue
+  Drew: '#22c55e',      // Green
+  Jordan: '#a855f7',    // Purple
+};
 
-export const TelemetryChart: React.FC<TelemetryChartProps> = ({
-  data,
-  dataKey,
-  name,
-  color,
-  unit,
-  syncId,
-}) => {
+const CustomTooltip = ({ active, payload, label, laps }: any) => {
+  if (active && payload && payload.length) {
+    const distance = Math.round(label);
+    const refLap = laps.find((l: any) => l.isReferenceLap);
+    const compLap = laps.find((l: any) => !l.isReferenceLap);
+
+    return (
+      <div className="bg-slate-900/95 border border-slate-700 p-4 rounded-lg shadow-2xl backdrop-blur-sm">
+        <p className="text-slate-400 text-[10px] font-bold uppercase tracking-wider mb-2">Distance: {distance}m</p>
+        <div className="grid grid-cols-2 gap-4">
+          {[refLap, compLap].filter(Boolean).map((lap) => {
+            const prefix = lap.isReferenceLap ? 'Ref: ' : 'Comp: ';
+            const color = DRIVER_COLORS[lap.driverName] || '#94a3b8';
+            
+            const speed = payload.find((p: any) => p.dataKey === `speed_${lap.driverName}`)?.value;
+            const throttle = payload.find((p: any) => p.dataKey === `throttle_${lap.driverName}`)?.value;
+            const brake = payload.find((p: any) => p.dataKey === `brake_${lap.driverName}`)?.value;
+
+            return (
+              <div key={lap.driverName} className="space-y-1">
+                <p className="text-xs font-bold" style={{ color }}>{prefix}{lap.driverName}</p>
+                <div className="text-[11px] text-slate-300 grid grid-cols-2 gap-x-2">
+                  <span className="text-slate-500">Speed:</span><span className="font-mono text-right">{speed?.toFixed(1) || '0.0'}</span>
+                  <span className="text-slate-500">Throt:</span><span className="font-mono text-right">{throttle?.toFixed(0) || '0'}%</span>
+                  <span className="text-slate-500">Brake:</span><span className="font-mono text-right">{brake?.toFixed(0) || '0'}%</span>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+        {payload.find((p: any) => p.dataKey === 'deltaValue') && (
+          <div className="mt-2 pt-2 border-t border-slate-700">
+            <p className="text-[10px] font-bold text-red-500 uppercase tracking-wider">
+              Time Delta: {payload.find((p: any) => p.dataKey === 'deltaValue')?.value.toFixed(3)}s
+            </p>
+          </div>
+        )}
+      </div>
+    );
+  }
+  return null;
+};
+
+export const TelemetryChart: React.FC<TelemetryChartProps> = ({ laps, deltaData }) => {
+  // Task 3: Data Transformation for Recharts
+  const chartData = useMemo(() => {
+    if (laps.length === 0) return [];
+
+    const masterLap = laps.find(l => l.isReferenceLap) || laps[0];
+    
+    return masterLap.data.map((point, index) => {
+      const distance = Math.round(point.distance);
+      const entry: any = { distance };
+
+      laps.forEach(lap => {
+        const lapPoint = lap.data[index] || lap.data[lap.data.length - 1];
+        entry[`speed_${lap.driverName}`] = lapPoint.speed;
+        entry[`throttle_${lap.driverName}`] = lapPoint.throttle;
+        entry[`brake_${lap.driverName}`] = lapPoint.brake;
+      });
+
+      if (deltaData) {
+        const d = deltaData[index] || deltaData[deltaData.length - 1];
+        entry.deltaValue = d ? d.delta : 0;
+      }
+
+      return entry;
+    });
+  }, [laps, deltaData]);
+
+  const renderLines = (dataKeyPrefix: string) => {
+    return laps.map((lap) => (
+      <Line
+        key={`${dataKeyPrefix}_${lap.driverName}`}
+        type="monotone"
+        dataKey={`${dataKeyPrefix}_${lap.driverName}`}
+        name={lap.driverName}
+        stroke={DRIVER_COLORS[lap.driverName] || '#94a3b8'}
+        dot={false}
+        isAnimationActive={false} // Performance: Turn off animations
+        strokeWidth={lap.isReferenceLap ? 2.5 : 1.5}
+      />
+    ));
+  };
+
   return (
-    <div className="h-64 w-full bg-slate-900 p-4 rounded-lg shadow-lg mb-4">
-      <h3 className="text-white text-sm font-semibold mb-2">{name}</h3>
-      <ResponsiveContainer width="100%" height="100%">
-        <LineChart data={data} syncId={syncId}>
-          <CartesianGrid strokeDasharray="3 3" stroke="#334155" />
-          <XAxis 
-            dataKey="distance" 
-            label={{ value: 'Distance (m)', position: 'insideBottom', offset: -5, fill: '#94a3b8' }} 
-            stroke="#94a3b8"
-          />
-          <YAxis 
-            label={{ value: unit, angle: -90, position: 'insideLeft', fill: '#94a3b8' }} 
-            stroke="#94a3b8"
-          />
-          <Tooltip 
-            contentStyle={{ backgroundColor: '#1e293b', border: 'none', borderRadius: '8px' }}
-            itemStyle={{ color: '#f8fafc' }}
-          />
-          <Line 
-            type="monotone" 
-            dataKey={dataKey} 
-            stroke={color} 
-            dot={false} 
-            strokeWidth={2}
-          />
-        </LineChart>
-      </ResponsiveContainer>
+    <div className="flex flex-col gap-4 bg-slate-900 border border-slate-800 p-4 md:p-6 rounded-2xl shadow-xl">
+      {/* Task 4: Speed Chart */}
+      <div className="h-[200px] md:h-64 w-full">
+        <h3 className="text-slate-400 text-xs font-bold uppercase tracking-widest mb-2">Speed (km/h)</h3>
+        <ResponsiveContainer width="100%" height="100%">
+          <LineChart data={chartData} syncId="telemetrySync" margin={{ left: -10, right: 10 }}>
+            <CartesianGrid strokeDasharray="3 3" stroke="#1e293b" vertical={false} />
+            <XAxis dataKey="distance" hide />
+            <YAxis stroke="#475569" fontSize={10} unit="km/h" domain={['auto', 'auto']} />
+            <Tooltip content={<CustomTooltip laps={laps} />} />
+            <Legend verticalAlign="top" height={36}/>
+            {renderLines('speed')}
+          </LineChart>
+        </ResponsiveContainer>
+      </div>
+
+      {/* Throttle Chart */}
+      <div className="h-[150px] md:h-48 w-full">
+        <h3 className="text-slate-400 text-xs font-bold uppercase tracking-widest mb-2">Throttle (%)</h3>
+        <ResponsiveContainer width="100%" height="100%">
+          <LineChart data={chartData} syncId="telemetrySync" margin={{ left: -10, right: 10 }}>
+            <CartesianGrid strokeDasharray="3 3" stroke="#1e293b" vertical={false} />
+            <XAxis dataKey="distance" hide />
+            <YAxis stroke="#475569" fontSize={10} domain={[0, 105]} />
+            <Tooltip content={<CustomTooltip laps={laps} />} />
+            {renderLines('throttle')}
+          </LineChart>
+        </ResponsiveContainer>
+      </div>
+
+      {/* Brake Chart */}
+      <div className="h-[150px] md:h-48 w-full">
+        <h3 className="text-slate-400 text-xs font-bold uppercase tracking-widest mb-2">Brake (%)</h3>
+        <ResponsiveContainer width="100%" height="100%">
+          <LineChart data={chartData} syncId="telemetrySync" margin={{ left: -10, right: 10 }}>
+            <CartesianGrid strokeDasharray="3 3" stroke="#1e293b" vertical={false} />
+            <XAxis dataKey="distance" hide />
+            <YAxis stroke="#475569" fontSize={10} domain={[0, 105]} />
+            <Tooltip content={<CustomTooltip laps={laps} />} />
+            {renderLines('brake')}
+          </LineChart>
+        </ResponsiveContainer>
+      </div>
+
+      {/* Task 1: Delta Chart */}
+      <div className="h-[150px] md:h-48 w-full">
+        <h3 className="text-slate-400 text-xs font-bold uppercase tracking-widest mb-2">Time Delta (s)</h3>
+        <ResponsiveContainer width="100%" height="100%">
+          <LineChart data={chartData} syncId="telemetrySync" margin={{ left: -10, right: 10 }}>
+            <CartesianGrid strokeDasharray="3 3" stroke="#1e293b" vertical={false} />
+            <XAxis 
+              dataKey="distance" 
+              stroke="#475569" 
+              fontSize={10} 
+              tickFormatter={(val) => `${val}m`}
+            />
+            <YAxis stroke="#475569" fontSize={10} domain={['auto', 'auto']} />
+            <Tooltip content={<CustomTooltip laps={laps} />} />
+            <Line 
+              type="monotone" 
+              dataKey="deltaValue" 
+              stroke="#ef4444" 
+              dot={false} 
+              strokeWidth={2}
+              isAnimationActive={false} 
+            />
+          </LineChart>
+        </ResponsiveContainer>
+      </div>
     </div>
   );
 };
+
+
