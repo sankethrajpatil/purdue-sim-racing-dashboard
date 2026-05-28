@@ -77,3 +77,43 @@ export function findVminPoints(
 
   return vmins;
 }
+
+/**
+ * Task 1: Estimating the G-G Friction Ellipse Area.
+ * Uses 90th percentile to ignore outliers and capture the usable grip limit.
+ */
+export function calculateGG_Area(lap: TelemetryPoint[]): number {
+  if (lap.length === 0) return 0;
+
+  const latVals = lap.map(p => Math.abs(p.latAccel)).sort((a, b) => a - b);
+  const longVals = lap.map(p => Math.abs(p.longAccel)).sort((a, b) => a - b);
+
+  const p90Idx = Math.floor(lap.length * 0.9);
+  
+  const a = latVals[p90Idx]; // Major axis (Lateral)
+  const b = longVals[p90Idx]; // Minor axis (Longitudinal)
+
+  return Math.PI * a * b;
+}
+
+/**
+ * Task 1: Steering Smoothness Calculation.
+ * Measures average rate of change (derivative) of steering input.
+ */
+export function calculateSteeringSmoothness(lap: TelemetryPoint[]): number {
+  if (lap.length < 2) return 0;
+
+  let totalChange = 0;
+  let validPoints = 0;
+
+  for (let i = 1; i < lap.length; i++) {
+    const steering = lap[i].steeringAngle ?? 0;
+    const prevSteering = lap[i-1].steeringAngle ?? 0;
+    
+    // We assume data is sampled at constant intervals for dashboard visualization
+    totalChange += Math.abs(steering - prevSteering);
+    validPoints++;
+  }
+
+  return validPoints > 0 ? totalChange / validPoints : 0;
+}

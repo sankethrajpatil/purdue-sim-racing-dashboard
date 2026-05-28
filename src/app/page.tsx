@@ -6,8 +6,8 @@ import { TelemetryChart } from '@/components/dashboard/TelemetryChart';
 import { TelemetryInsights } from '@/components/dashboard/TelemetryInsights';
 import { TelemetryUploader } from '@/components/telemetry/TelemetryUploader';
 import { Activity } from 'lucide-react';
-import { calculateLapDelta, findVminPoints } from '@/utils/telemetryMath';
-import { LapData, TelemetryPoint } from '@/types/telemetry';
+import { calculateLapDelta, findVminPoints, calculateGG_Area, calculateSteeringSmoothness } from '@/utils/telemetryMath';
+import { LapData, TelemetryPoint, DriverStatRecord } from '@/types/telemetry';
 
 // Simple standalone Delta Chart component since we need multiple charts
 const DeltaChart = ({ data, name }: { data: any[], name: string }) => (
@@ -38,6 +38,7 @@ import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContai
 
 export default function Home() {
   const [laps, setLaps] = useState<LapData[]>([]);
+  const [driverStats, setDriverStats] = useState<Record<string, DriverStatRecord[]>>({});
 
   const handleUpload = (newLap: LapData) => {
     setLaps(prev => {
@@ -75,10 +76,28 @@ export default function Home() {
   const telemetryContext = useMemo(() => {
     if (!referenceLap || !comparisonLap || !deltaData) return 'No telemetry data uploaded.';
     const finalDelta = deltaData[deltaData.length - 1]?.delta || 0;
-    return `${comparisonLap.driverName} is currently ${Math.abs(finalDelta).toFixed(3)}s ${finalDelta > 0 ? 'slower' : 'faster'} than ${referenceLap.driverName}. 
+    
+    // Task 3: Calculate Style Metrics for AI context
+    const ggArea = calculateGG_Area(comparisonLap.data);
+    const smoothness = calculateSteeringSmoothness(comparisonLap.data);
+    
+    let context = `${comparisonLap.driverName} is currently ${Math.abs(finalDelta).toFixed(3)}s ${finalDelta > 0 ? 'slower' : 'faster'} than ${referenceLap.driverName}. 
     Reference driver: ${referenceLap.driverName}, Comparison driver: ${comparisonLap.driverName}. 
+    Style Metrics for ${comparisonLap.driverName}: G-G Area: ${ggArea.toFixed(2)} G², Steering Smoothness: ${smoothness.toFixed(3)}.
     Data includes Speed, Throttle, and Brake inputs across the entire lap.`;
-  }, [referenceLap, comparisonLap, deltaData]);
+
+    // Add Driver progression data if available
+    const compStats = driverStats[comparisonLap.driverName];
+    if (compStats && compStats.length > 0) {
+      const latest = compStats[compStats.length - 1];
+      const previous = compStats.length > 1 ? compStats[compStats.length - 2] : null;
+      const trend = previous ? (latest.iRating >= previous.iRating ? 'increased' : 'decreased') : 'is stable';
+      
+      context += `\nDriver Progression: ${comparisonLap.driverName} currently has an iRating of ${latest.iRating} and a Safety Rating of ${latest.safetyRating.toFixed(2)}. Over their last recorded sessions, their iRating has ${trend}.`;
+    }
+
+    return context;
+  }, [referenceLap, comparisonLap, deltaData, driverStats]);
 
   return (
     <DashboardLayout laps={laps} onDeleteLap={deleteLap} telemetryContext={telemetryContext}>

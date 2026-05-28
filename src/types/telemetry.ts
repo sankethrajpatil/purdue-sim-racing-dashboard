@@ -5,6 +5,7 @@ export interface TelemetryPoint {
   brake: number;
   latAccel: number;
   longAccel: number;
+  steeringAngle?: number;
   lapTime?: number;
 }
 

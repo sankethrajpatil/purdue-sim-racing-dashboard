@@ -34,6 +34,7 @@ export const TelemetryUploader: React.FC<TelemetryUploaderProps> = ({ onUpload }
           brake: row['Brake'] || row['brake'] || 0,
           latAccel: row['LatAccel'] || row['latAccel'] || 0,
           longAccel: row['LongAccel'] || row['longAccel'] || 0,
+          steeringAngle: row['SteeringWheelAngle'] || row['steeringAngle'] || 0,
           lapTime: row['LapTime'] || row['lapTime'],
         }));
 
