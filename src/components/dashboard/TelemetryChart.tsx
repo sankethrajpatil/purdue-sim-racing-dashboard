@@ -10,6 +10,10 @@ import {
   Tooltip,
   Legend,
   ResponsiveContainer,
+  ScatterChart,
+  Scatter,
+  ZAxis,
+  Cell,
 } from 'recharts';
 import { LapData } from '@/types/telemetry';
 
@@ -179,6 +183,61 @@ export const TelemetryChart: React.FC<TelemetryChartProps> = ({ laps, deltaData 
             />
           </LineChart>
         </ResponsiveContainer>
+      </div>
+
+      {/* Task 1: G-G Friction Ellipse (Traction Circle) */}
+      <div className="bg-slate-900 border border-slate-800 p-4 md:p-6 rounded-2xl shadow-xl mt-4">
+        <h3 className="text-slate-400 text-xs font-bold uppercase tracking-widest mb-4 flex items-center gap-2">
+          G-G Diagram (Traction Circle)
+          <span className="text-[10px] lowercase font-normal text-slate-500">(Lat G vs Long G)</span>
+        </h3>
+        <div className="h-[300px] md:h-[400px] w-full">
+          <ResponsiveContainer width="100%" height="100%">
+            <ScatterChart margin={{ top: 20, right: 20, bottom: 20, left: 20 }}>
+              <CartesianGrid strokeDasharray="3 3" stroke="#1e293b" />
+              <XAxis 
+                type="number" 
+                dataKey="x" 
+                name="Lateral G" 
+                unit="G" 
+                stroke="#475569" 
+                fontSize={10}
+                domain={[-2.5, 2.5]}
+              />
+              <YAxis 
+                type="number" 
+                dataKey="y" 
+                name="Longitudinal G" 
+                unit="G" 
+                stroke="#475569" 
+                fontSize={10}
+                domain={[-3.5, 3.5]}
+              />
+              <ZAxis type="number" range={[10, 10]} />
+              <Tooltip 
+                cursor={{ strokeDasharray: '3 3' }}
+                contentStyle={{ backgroundColor: '#0f172a', borderColor: '#334155', fontSize: '12px' }}
+                itemStyle={{ color: '#94a3b8' }}
+              />
+              <Legend verticalAlign="top" height={36}/>
+              {laps.map((lap) => (
+                <Scatter
+                  key={`gg_${lap.driverName}`}
+                  name={lap.driverName}
+                  data={lap.data
+                    .filter((_, i) => i % 10 === 0)
+                    .map(p => ({ x: p.latAccel, y: p.longAccel }))
+                  }
+                  fill={DRIVER_COLORS[lap.driverName] || '#94a3b8'}
+                  isAnimationActive={false}
+                />
+              ))}
+            </ScatterChart>
+          </ResponsiveContainer>
+        </div>
+        <p className="text-[10px] text-slate-500 italic mt-2 text-center">
+          Performance Note: Visualizing 10% sample of telemetry points to maintain UI responsiveness.
+        </p>
       </div>
     </div>
   );

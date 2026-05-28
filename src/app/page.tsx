@@ -72,8 +72,16 @@ export default function Home() {
     };
   }, [comparisonLap]);
 
+  const telemetryContext = useMemo(() => {
+    if (!referenceLap || !comparisonLap || !deltaData) return 'No telemetry data uploaded.';
+    const finalDelta = deltaData[deltaData.length - 1]?.delta || 0;
+    return `${comparisonLap.driverName} is currently ${Math.abs(finalDelta).toFixed(3)}s ${finalDelta > 0 ? 'slower' : 'faster'} than ${referenceLap.driverName}. 
+    Reference driver: ${referenceLap.driverName}, Comparison driver: ${comparisonLap.driverName}. 
+    Data includes Speed, Throttle, and Brake inputs across the entire lap.`;
+  }, [referenceLap, comparisonLap, deltaData]);
+
   return (
-    <DashboardLayout laps={laps} onDeleteLap={deleteLap}>
+    <DashboardLayout laps={laps} onDeleteLap={deleteLap} telemetryContext={telemetryContext}>
       {laps.length === 0 ? (
         <div className="flex flex-col items-center justify-center h-full min-h-[400px] gap-8">
           <div className="bg-slate-900 border border-slate-800 rounded-2xl p-12 text-center max-w-md shadow-2xl">

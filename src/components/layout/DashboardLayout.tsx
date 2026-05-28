@@ -9,11 +9,17 @@ import { TelemetryChat } from '../chat/TelemetryChat';
 
 interface DashboardLayoutProps {
   children: React.ReactNode;
-  laps: LapData[];
-  onDeleteLap: (name: string) => void;
+  laps?: LapData[];
+  onDeleteLap?: (name: string) => void;
+  telemetryContext?: string;
 }
 
-export const DashboardLayout: React.FC<DashboardLayoutProps> = ({ children, laps, onDeleteLap }) => {
+export const DashboardLayout: React.FC<DashboardLayoutProps> = ({ 
+  children, 
+  laps = [], 
+  onDeleteLap = () => {}, 
+  telemetryContext 
+}) => {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
 
   return (
@@ -51,7 +57,7 @@ export const DashboardLayout: React.FC<DashboardLayoutProps> = ({ children, laps
         </main>
       </div>
       
-      <TelemetryChat />
+      <TelemetryChat telemetryContext={telemetryContext} />
     </div>
   );
 };

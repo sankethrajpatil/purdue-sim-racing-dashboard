@@ -1,24 +1,29 @@
 'use client';
 
 import React, { useState, useRef, useEffect } from 'react';
-import { MessageSquare, Send, X, Bot, User } from 'lucide-react';
+import { useChat } from 'ai/react';
+import { MessageSquare, Send, X, Bot, User, Loader2 } from 'lucide-react';
 
-interface Message {
-  id: number;
-  role: 'system' | 'user' | 'assistant';
-  content: string;
+interface TelemetryChatProps {
+  telemetryContext?: string;
 }
 
-export const TelemetryChat: React.FC = () => {
+export const TelemetryChat: React.FC<TelemetryChatProps> = ({ telemetryContext = '' }) => {
   const [isOpen, setIsOpen] = useState(false);
-  const [input, setInput] = useState('');
-  const [messages, setMessages] = useState<Message[]>([
-    {
-      id: 1,
-      role: 'assistant',
-      content: "I analyzed the telemetry. Emmett is losing 0.8s at Eau Rouge (Track Distance 2200m) due to an early throttle lift and lower Vmin. Want me to explain the momentum drop?"
-    }
-  ]);
+  
+  const { messages, input, handleInputChange, handleSubmit, isLoading } = useChat({
+    api: '/api/chat',
+    body: {
+      telemetryContext,
+    },
+    initialMessages: [
+      {
+        id: 'welcome',
+        role: 'assistant',
+        content: "Hi! I'm the Purdue Sim Racing AI. Ready to analyze your telemetry. What would you like to know about your latest lap?"
+      }
+    ]
+  });
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
@@ -32,29 +37,6 @@ export const TelemetryChat: React.FC = () => {
     }
   }, [messages, isOpen]);
 
-  const handleSend = () => {
-    if (!input.trim()) return;
-
-    const userMessage: Message = {
-      id: Date.now(),
-      role: 'user',
-      content: input
-    };
-
-    setMessages(prev => [...prev, userMessage]);
-    setInput('');
-
-    // Mock response
-    setTimeout(() => {
-      const assistantMessage: Message = {
-        id: Date.now() + 1,
-        role: 'assistant',
-        content: "That's a great question. In iRacing, the transition through Raidillion requires precise steering input to keep the platform stable. Emmett's steering traces show oscillating input which induces drag. Try a more progressive turn-in next lap."
-      };
-      setMessages(prev => [...prev, assistantMessage]);
-    }, 1000);
-  };
-
   return (
     <div className="fixed bottom-6 right-6 z-[100]">
       {isOpen ? (
@@ -67,7 +49,7 @@ export const TelemetryChat: React.FC = () => {
               </div>
               <div>
                 <h3 className="text-sm font-bold text-white leading-tight">Club AI Assistant</h3>
-                <p className="text-[10px] text-slate-400 uppercase tracking-widest">Telemetry Engineer</p>
+                <p className="text-[10px] text-slate-400 uppercase tracking-widest">Telemetry Engineer (Gemini)</p>
               </div>
             </div>
             <button 
@@ -99,28 +81,42 @@ export const TelemetryChat: React.FC = () => {
                 </div>
               </div>
             ))}
+            {isLoading && (
+              <div className="flex gap-3">
+                <div className="w-8 h-8 rounded-full bg-slate-800 text-slate-400 flex items-center justify-center shrink-0">
+                  <Bot size={16} />
+                </div>
+                <div className="p-3 rounded-2xl text-sm bg-slate-800 text-slate-400 rounded-tl-none flex items-center gap-2">
+                  <Loader2 size={14} className="animate-spin" />
+                  Thinking...
+                </div>
+              </div>
+            )}
             <div ref={messagesEndRef} />
           </div>
 
           {/* Input */}
-          <div className="p-4 bg-slate-800/50 border-t border-slate-700">
+          <form 
+            onSubmit={handleSubmit}
+            className="p-4 bg-slate-800/50 border-t border-slate-700"
+          >
             <div className="flex gap-2">
               <input 
                 type="text" 
                 value={input}
-                onChange={(e) => setInput(e.target.value)}
-                onKeyDown={(e) => e.key === 'Enter' && handleSend()}
+                onChange={handleInputChange}
                 placeholder="Ask about your telemetry..."
                 className="flex-1 bg-slate-950 border border-slate-700 rounded-xl px-4 py-2 text-sm text-white focus:outline-none focus:ring-2 focus:ring-orange-500/50"
               />
               <button 
-                onClick={handleSend}
-                className="bg-orange-600 hover:bg-orange-500 text-white p-2 rounded-xl transition"
+                type="submit"
+                disabled={isLoading || !input.trim()}
+                className="bg-orange-600 hover:bg-orange-500 disabled:opacity-50 disabled:hover:bg-orange-600 text-white p-2 rounded-xl transition shadow-lg"
               >
                 <Send size={18} />
               </button>
             </div>
-          </div>
+          </form>
         </div>
       ) : (
         <button 

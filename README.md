@@ -3,14 +3,14 @@
 A Next.js-based telemetry analysis tool for the Purdue Sim Racing Club.
 
 ## Features
-- **Telemetry Charts**: Synchronized Speed, Throttle, and Brake overlays against Track Distance.
-- **Lap Time Delta**: Real-time delta comparison against a reference lap (Peddycord).
-- **Improvement Areas**: Automated identification of time-loss sectors.
-- **Serverless API**: Next.js API routes ready for complex telemetry math.
+- **Telemetry Charts**: Synchronized Speed, Throttle, Brake, and delta overlays against Track Distance.
+- **AI Race Engineer**: Integrated Gemini 1.5 Flash assistant for live performance analysis.
+- **Vectorized Insights**: Automated identification of steepest delta slopes and Vmin inconsistencies.
+- **Lap Time Delta**: Real-time delta comparison against a reference lap.
 
 ## Tech Stack
 - **Frontend**: Next.js 16, Tailwind CSS, Recharts, PapaParse.
-- **Backend**: Vercel Serverless Functions.
+- **AI**: Vercel AI SDK, Gemini 1.5 Flash.
 - **Data**: CSV exports from Garage61.
 
 ## Getting Started
