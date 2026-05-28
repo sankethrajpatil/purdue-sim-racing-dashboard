@@ -21,3 +21,14 @@ export interface DriverStatRecord {
   safetyRating: number;
   cleanLapPercentage: number;
 }
+
+export interface StintLap {
+  lapNumber: number;
+  driverName: string;
+  lapTime: number;
+}
+
+export interface StintData {
+  driverName: string;
+  laps: StintLap[];
+}

@@ -117,3 +117,28 @@ export function calculateSteeringSmoothness(lap: TelemetryPoint[]): number {
 
   return validPoints > 0 ? totalChange / validPoints : 0;
 }
+
+/**
+ * Task 1: Tire Degradation Calculation.
+ * Calculates average seconds lost per lap in a stint.
+ * Excludes outliers (in-laps/out-laps) by checking for laps significantly slower than the minimum.
+ */
+export function calculateTireDegradation(lapTimes: number[]): number {
+  if (lapTimes.length < 3) return 0;
+
+  // Filter out in-laps/out-laps (threshold: > 107% of the fastest lap)
+  const minLap = Math.min(...lapTimes);
+  const cleanLaps = lapTimes.filter(t => t < minLap * 1.07);
+
+  if (cleanLaps.length < 2) return 0;
+
+  let totalDelta = 0;
+  let count = 0;
+
+  for (let i = 1; i < cleanLaps.length; i++) {
+    totalDelta += cleanLaps[i] - cleanLaps[i - 1];
+    count++;
+  }
+
+  return count > 0 ? totalDelta / count : 0;
+}

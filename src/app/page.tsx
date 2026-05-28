@@ -5,9 +5,10 @@ import { DashboardLayout } from '@/components/layout/DashboardLayout';
 import { TelemetryChart } from '@/components/dashboard/TelemetryChart';
 import { TelemetryInsights } from '@/components/dashboard/TelemetryInsights';
 import { TelemetryUploader } from '@/components/telemetry/TelemetryUploader';
-import { Activity } from 'lucide-react';
+import { StintAnalysisChart } from '@/components/dashboard/StintAnalysisChart';
+import { Activity, LayoutDashboard, Timer } from 'lucide-react';
 import { calculateLapDelta, findVminPoints, calculateGG_Area, calculateSteeringSmoothness } from '@/utils/telemetryMath';
-import { LapData, TelemetryPoint, DriverStatRecord } from '@/types/telemetry';
+import { LapData, TelemetryPoint, DriverStatRecord, StintData } from '@/types/telemetry';
 
 // Simple standalone Delta Chart component since we need multiple charts
 const DeltaChart = ({ data, name }: { data: any[], name: string }) => (
@@ -39,6 +40,37 @@ import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContai
 export default function Home() {
   const [laps, setLaps] = useState<LapData[]>([]);
   const [driverStats, setDriverStats] = useState<Record<string, DriverStatRecord[]>>({});
+  const [view, setView] = useState<'telemetry' | 'stint'>('telemetry');
+
+  // Sample Stint Data for demonstration if none uploaded
+  const stintData: StintData[] = useMemo(() => [
+    {
+      driverName: 'Peddycord',
+      laps: [
+        { lapNumber: 1, driverName: 'Peddycord', lapTime: 138.452 },
+        { lapNumber: 2, driverName: 'Peddycord', lapTime: 138.567 },
+        { lapNumber: 3, driverName: 'Peddycord', lapTime: 138.642 },
+        { lapNumber: 4, driverName: 'Peddycord', lapTime: 138.812 },
+        { lapNumber: 5, driverName: 'Peddycord', lapTime: 138.923 },
+        { lapNumber: 6, driverName: 'Peddycord', lapTime: 139.145 },
+        { lapNumber: 7, driverName: 'Peddycord', lapTime: 139.345 },
+        { lapNumber: 8, driverName: 'Peddycord', lapTime: 139.512 },
+      ]
+    },
+    {
+      driverName: 'Emmett',
+      laps: [
+        { lapNumber: 1, driverName: 'Emmett', lapTime: 139.123 },
+        { lapNumber: 2, driverName: 'Emmett', lapTime: 139.045 },
+        { lapNumber: 3, driverName: 'Emmett', lapTime: 139.156 },
+        { lapNumber: 4, driverName: 'Emmett', lapTime: 139.212 },
+        { lapNumber: 5, driverName: 'Emmett', lapTime: 139.367 },
+        { lapNumber: 6, driverName: 'Emmett', lapTime: 139.423 },
+        { lapNumber: 7, driverName: 'Emmett', lapTime: 139.556 },
+        { lapNumber: 8, driverName: 'Emmett', lapTime: 139.712 },
+      ]
+    }
+  ], []);
 
   const handleUpload = (newLap: LapData) => {
     setLaps(prev => {
@@ -101,23 +133,42 @@ export default function Home() {
 
   return (
     <DashboardLayout laps={laps} onDeleteLap={deleteLap} telemetryContext={telemetryContext}>
-      {laps.length === 0 ? (
-        <div className="flex flex-col items-center justify-center h-full min-h-[400px] gap-8">
-          <div className="bg-slate-900 border border-slate-800 rounded-2xl p-12 text-center max-w-md shadow-2xl">
-            <div className="w-16 h-16 bg-slate-800 rounded-full flex items-center justify-center mx-auto mb-6 text-orange-500">
-              <Activity size={32} />
+      {/* View Toggle */}
+      <div className="flex bg-slate-900/50 p-1 rounded-xl border border-slate-800 w-fit mb-8">
+        <button 
+          onClick={() => setView('telemetry')}
+          className={`px-6 py-2 rounded-lg text-sm font-bold flex items-center gap-2 transition ${view === 'telemetry' ? 'bg-orange-600 text-white shadow-lg shadow-orange-900/20' : 'text-slate-400 hover:text-white'}`}
+        >
+          <LayoutDashboard size={16} />
+          Telemetry View
+        </button>
+        <button 
+          onClick={() => setView('stint')}
+          className={`px-6 py-2 rounded-lg text-sm font-bold flex items-center gap-2 transition ${view === 'stint' ? 'bg-orange-600 text-white shadow-lg shadow-orange-900/20' : 'text-slate-400 hover:text-white'}`}
+        >
+          <Timer size={16} />
+          Stint Analysis
+        </button>
+      </div>
+
+      {view === 'telemetry' ? (
+        laps.length === 0 ? (
+          <div className="flex flex-col items-center justify-center h-full min-h-[400px] gap-8">
+            <div className="bg-slate-900 border border-slate-800 rounded-2xl p-12 text-center max-w-md shadow-2xl">
+              <div className="w-16 h-16 bg-slate-800 rounded-full flex items-center justify-center mx-auto mb-6 text-orange-500">
+                <Activity size={32} />
+              </div>
+              <h2 className="text-2xl font-bold mb-2">Awaiting Telemetry Data...</h2>
+              <p className="text-slate-400 mb-8">
+                Upload Garage61 CSV files to begin analyzing driver performance at Spa-Francorchamps.
+              </p>
             </div>
-            <h2 className="text-2xl font-bold mb-2">Awaiting Telemetry Data...</h2>
-            <p className="text-slate-400 mb-8">
-              Upload Garage61 CSV files to begin analyzing driver performance at Spa-Francorchamps.
-            </p>
+            
+            <div className="w-full max-w-md">
+              <TelemetryUploader onUpload={handleUpload} />
+            </div>
           </div>
-          
-          <div className="w-full max-w-md">
-            <TelemetryUploader onUpload={handleUpload} />
-          </div>
-        </div>
-      ) : (
+        ) : (
         <div className="flex flex-col gap-6">
           <div className="grid grid-cols-1 lg:grid-cols-4 gap-8">
             <div className="lg:col-span-3 space-y-6">
@@ -160,6 +211,8 @@ export default function Home() {
             </div>
           </div>
         </div>
+      )) : (
+        <StintAnalysisChart stints={stintData} />
       )}
     </DashboardLayout>
   );
